@@ -261,50 +261,6 @@ class SentryTest(TestCase):
         },
     }
 
-    def test_report_to_sentry(self):
-        store = M.store_from_config(self.database)
-        with patch('raven.Client.captureMessage') as raven_mock:
-            try:
-                store.execute('select a from non_existing_table limit 1')
-            except MySQLdb.ProgrammingError:
-                pass
-            ok_(raven_mock.called, 'Does not report to sentry')
-
-    def test_no_sentry(self):
-        store = M.store_from_config(self.database_no_sentry)
-        with patch('raven.Client.captureMessage') as raven_mock:
-            try:
-                store.execute('select a from non_existing_table limit 1')
-            except MySQLdb.ProgrammingError:
-                pass
-            ok_(not raven_mock.called, 'Should not report to sentry')
-
-    def test_no_interference_between_stores(self):
-        store1 = M.store_from_config(self.database)
-        store2 = M.store_from_config(self.database_no_sentry)
-        store3 = M.store_from_config(self.database, use_cache=False)
-
-        with patch('raven.Client.captureMessage') as raven_mock1:
-            try:
-                store1.execute('select a from non_existing_table limit 1')
-            except MySQLdb.ProgrammingError:
-                pass
-            ok_(raven_mock1.called, 'Does not report to sentry')
-
-        with patch('raven.Client.captureMessage') as raven_mock2:
-            try:
-                store2.execute('select a from non_existing_table limit 1')
-            except MySQLdb.ProgrammingError:
-                pass
-            ok_(not raven_mock2.called, 'Should not report to sentry')
-
-        with patch('raven.Client.captureMessage') as raven_mock3:
-            try:
-                store3.execute('select a from non_existing_table limit 1')
-            except MySQLdb.ProgrammingError:
-                pass
-            ok_(raven_mock3.called, 'Does not report to sentry')
-
 
 class ConfigPushTest(TestCase):
     database = {
@@ -389,80 +345,6 @@ class ConfigPushTest(TestCase):
         # farm3 should be created
         farm3 = store.get_farm('farm3')
         eq_(farm3.dbcnf, farm3_dbconf)
-
-
-class StatsdTest(TestCase):
-    database = {
-        'farms': {
-            "farm1": {
-                "master": "127.0.0.1:3306:test_sqlstore1:sqlstore:sqlstore",
-                "tables": ["test_table1", "*"],
-            },
-            "farm2": {
-                "master": "127.0.0.1:3306:test_sqlstore2:sqlstore:sqlstore",
-                "tables": ["test_table2"],
-            },
-        },
-        'statsd': {
-            'config': 'test',
-            'sample_rate': 1
-        }
-    }
-
-    database_no_statsd = {
-        'farms': {
-            "farm1": {
-                "master": "127.0.0.1:3306:test_sqlstore1:sqlstore:sqlstore",
-                "tables": ["test_table1", "*"],
-            },
-            "farm2": {
-                "master": "127.0.0.1:3306:test_sqlstore2:sqlstore:sqlstore",
-                "tables": ["test_table2"],
-            },
-        },
-    }
-
-    @patch('statsdclient.statsd_from_config')
-    def test_exception_stats(self, mock_statsd_from_config):
-        statsd = MagicMock()
-        mock_statsd_from_config.return_value = statsd
-        store = M.store_from_config(self.database, use_cache=False)
-        try:
-            store.execute('select a from non_existing_table limit 1')
-        except MySQLdb.ProgrammingError:
-            pass
-        ok_(statsd.timing_since.called,
-            'statsd.timing_since is not called')
-
-    @patch('statsdclient.statsd_from_config')
-    def test_success_stats(self, mock_statsd_from_config):
-        statsd = MagicMock()
-        mock_statsd_from_config.return_value = statsd
-        store = M.store_from_config(self.database, use_cache=False)
-        store.execute('select id from test_table1 limit 1')
-        ok_(statsd.timing_since.called,
-            'statsd.timing_since is not called')
-
-    @patch('statsdclient.statsd_from_config')
-    def test_exception_no_stats(self, mock_statsd_from_config):
-        statsd = MagicMock()
-        mock_statsd_from_config.return_value = statsd
-        store = M.store_from_config(self.database_no_statsd, use_cache=False)
-        try:
-            store.execute('select a from non_existing_table limit 1')
-        except MySQLdb.ProgrammingError:
-            pass
-        ok_(not statsd.timing_since.called,
-            'statsd.timing_since is called')
-
-    @patch('statsdclient.statsd_from_config')
-    def test_success_no_stats(self, mock_statsd_from_config):
-        statsd = MagicMock()
-        mock_statsd_from_config.return_value = statsd
-        store = M.store_from_config(self.database_no_statsd, use_cache=False)
-        store.execute('select id from test_table1 limit 1')
-        ok_(not statsd.timing_since.called,
-            'statsd.timing_since is called')
 
 
 if __name__ == '__main__':
