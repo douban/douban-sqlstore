@@ -3,13 +3,13 @@ from setuptools import setup, find_packages
 
 # package meta info
 NAME = "DoubanSQLStore"
-VERSION = "0.1"
+VERSION = "0.0.1"
 DESCRIPTION = ""
 AUTHOR = "Qiangning Hong"
 AUTHOR_EMAIL = "hongqn@gmail.com"
-LICENSE = "BSD"
-URL = ""
-KEYWORDS = ""
+LICENSE = "revised BSD"
+URL = "https://github.com/douban/douban-sqlstore"
+KEYWORDS = "MySQL"
 CLASSIFIERS = []
 
 # package contents
